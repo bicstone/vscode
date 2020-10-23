@@ -17,6 +17,7 @@ const vfs = require('vinyl-fs');
 const rename = require('gulp-rename');
 const replace = require('gulp-replace');
 const filter = require('gulp-filter');
+const sourcemaps = require('gulp-sourcemaps');
 const json = require('gulp-json-editor');
 const _ = require('underscore');
 const util = require('./lib/util');
@@ -201,13 +202,25 @@ function packageTask(platform, arch, sourceFolderName, destinationFolderName, op
 
 		const telemetry = gulp.src('.build/telemetry/**', { base: '.build/telemetry', dot: true });
 
+		const jsFilter = util.filter(data => /\.js$/.test(data.path));
+
 		const root = path.resolve(path.join(__dirname, '..'));
 		const dependenciesSrc = _.flatten(productionDependencies.map(d => path.relative(root, d.path)).map(d => [`${d}/**`, `!${d}/**/{test,tests}/**`]));
 
 		const deps = gulp.src(dependenciesSrc, { base: '.', dot: true })
-			.pipe(filter(['**', '!**/package-lock.json']))
+			.pipe(filter(['**', '!**/package-lock.json', '!**/yarn.lock']))
 			.pipe(util.cleanNodeModules(path.join(__dirname, '.nativeignore')))
-			.pipe(createAsar(path.join(process.cwd(), 'node_modules'), ['**/*.node', '**/vscode-ripgrep/bin/*', '**/node-pty/build/Release/*', '**/*.wasm'], 'app/node_modules.asar'));
+			.pipe(util.cleanNodeModules(path.join(__dirname, '.moduleignore')))
+			.pipe(jsFilter)
+			.pipe(util.loadSourcemaps(true))
+			// changes the sourcemap link in js files to sourceMappingURLBase. Adds source maps back to the stream
+			.pipe(sourcemaps.write('.', { addComment: true, includeContent: true, sourceMappingURL: f => `${sourceMappingURLBase}/${f.relative}.map` }))
+			// stores source and sourcemaps in a .buiild/node_mdoules, used later for uploading to sourceMappingURLBase
+			.pipe(vfs.dest('.build'))
+			// filter out the source maps again
+			.pipe(filter(['**', '!**/*.js.map'], { dot: true }))
+			.pipe(jsFilter.restore)
+			.pipe(createAsar(path.join(process.cwd(), 'node_modules'), ['**/*.node', '**/vscode-ripgrep/bin/*', '**/node-pty/build/Release/*', '**/*.wasm'], 'node_modules.asar'));
 
 		let all = es.merge(
 			packageJsonStream,

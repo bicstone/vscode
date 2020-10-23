@@ -36,6 +36,9 @@ function main() {
 
 		const extensionsOut = vfs.src(['.build/extensions/**/*.js.map', '!**/node_modules/**'], { base: '.build' });
 		sources.push(extensionsOut);
+
+		const dependenciesOut = vfs.src(['.build/node_modules/**/*.js.map'], { base: '.build' });
+		sources.push(dependenciesOut);
 	}
 
 	// specific client base/maps

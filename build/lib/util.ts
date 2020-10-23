@@ -156,7 +156,7 @@ declare class FileSourceMap extends VinylFile {
 	public sourceMap: sm.RawSourceMap;
 }
 
-export function loadSourcemaps(): NodeJS.ReadWriteStream {
+export function loadSourcemaps(ignoreMissingMaps = false): NodeJS.ReadWriteStream {
 	const input = es.through();
 
 	const output = input
@@ -197,7 +197,12 @@ export function loadSourcemaps(): NodeJS.ReadWriteStream {
 			f.contents = Buffer.from(contents.replace(/\/\/# sourceMappingURL=(.*)$/g, ''), 'utf8');
 
 			fs.readFile(path.join(path.dirname(f.path), lastMatch[1]), 'utf8', (err, contents) => {
-				if (err) { return cb(err); }
+				if (err) {
+					if (ignoreMissingMaps) {
+						return cb(undefined, f);
+					}
+					return cb(err);
+				}
 
 				f.sourceMap = JSON.parse(contents);
 				cb(undefined, f);
