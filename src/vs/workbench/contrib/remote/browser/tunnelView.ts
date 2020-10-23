@@ -414,7 +414,8 @@ class TunnelItem implements ITunnelItem {
 		if (address.length < 15) {
 			return address;
 		}
-		return new URL(address).host;
+		const host = new URL(address).host;
+		return host.length > 0 ? host : address;
 	}
 
 	set description(description: string | undefined) {
@@ -589,7 +590,8 @@ export class TunnelPanel extends ViewPane {
 	}
 
 	shouldShowWelcome(): boolean {
-		return this.viewModel.forwarded.length === 0 && this.viewModel.candidates.length === 0 && !this.isEditing;
+		return (this.viewModel.forwarded.length === 0) && (this.viewModel.candidates.length === 0) &&
+			(this.viewModel.detected.length === 0) && !this.isEditing;
 	}
 
 	focus(): void {
@@ -634,7 +636,7 @@ export class TunnelPanel extends ViewPane {
 		}
 
 		const actions: IAction[] = [];
-		this._register(createAndFillInContextMenuActions(this.contributedContextMenu, { shouldForwardArgs: true }, actions, this.contextMenuService));
+		this._register(createAndFillInContextMenuActions(this.contributedContextMenu, { shouldForwardArgs: true }, actions));
 
 		this.contextMenuService.showContextMenu({
 			getAnchor: () => treeEvent.anchor,
